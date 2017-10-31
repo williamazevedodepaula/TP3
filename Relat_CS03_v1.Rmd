@@ -2,7 +2,9 @@
 title: "Estudo de Caso 3"
 author: "Andre Avelar, Brayan Jaimes, Marcelo Carneiro, William de Paula"
 date: "07 de novembro de 2017"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -234,8 +236,11 @@ shapiro.test(model$residuals)
 sht <- shapiro.test(model$residuals)
 qqPlot(model$residuals, pch = 16, lwd = 3, cex = 1, las = 1, xlab = "Quantis Normalizados", ylab = "Resíduos", main = "Gráfico de Normalidade dos Resíduos")
 ```
+```{r, echo=FALSE,fig.align='center',out.width = '80%'}
+cat("p-valor: ",sht$p.value)
+```
 
-O resultado do teste de Shapiro-Wilk retornou um p-valor = `r sht$p.value`. Este p-valor muito baixo nos leva a rejeitar o teste de normalidade e concluir que os resíduos não possuem uma distribuição normal. No gráfico qqPlot, observamos que os dados estão fora da linha de normalidade, com valores abaixo da linha para quantis baixos e acima da linha para quantis altos. Este tipo de gráfico representa distibuições não normais com caudas leves.     
+O resultado do teste de Shapiro-Wilk retornou um p-valor = $`r sht$p.value`$. Este p-valor muito baixo nos leva a rejeitar o teste de normalidade e concluir que os resíduos não possuem uma distribuição normal. No gráfico qqPlot, observamos que os dados estão fora da linha de normalidade, com valores abaixo da linha para quantis baixos e acima da linha para quantis altos. Este tipo de gráfico representa distibuições não normais com caudas leves.     
 
 A premissa de homoscedasticidade pode ser verificada através do teste de Fligner-Killeen em conjunto com o gráfico por valores ajustados.   
 
@@ -244,8 +249,11 @@ fligner.test(out~label_out, data = algoritmo)
 flt <- fligner.test(out~label_out, data = algoritmo)
 plot(x = model$fitted.values, y = model$residuals, xlab = "Valores Ajustados", ylab = "Resíduos", main = "Gráfico de Homoscedasticidade dos Resíduos")
 ```
+```{r, echo=FALSE,fig.align='center',out.width = '80%'}
+cat("p-valor: ",flt$p.value)
+```
 
-O resultado do teste de Fligner-Killeen retornou um p-valor = `r flt$p.value`. Este p-valor muito baixo nos leva a rejeitar o teste de  homoscedasticidade e concluir que os resíduos possuem heteroscedasticidade. No gráfico por valores ajustados, observamos uma forma visual do tipo "megafone", onde para maiores valores ajustados no eixo x, temos maiores valores de resíduos no eixo y. Esta forma de gráfico caracteriza desigualdade de variâncias entre grupos, ou heteroscedasticidade.   
+O resultado do teste de Fligner-Killeen retornou um p-valor = $`r flt$p.value`$. Este p-valor muito baixo nos leva a rejeitar o teste de  homoscedasticidade e concluir que os resíduos possuem heteroscedasticidade. No gráfico por valores ajustados, observamos uma forma visual do tipo "megafone", onde para maiores valores ajustados no eixo x, temos maiores valores de resíduos no eixo y. Esta forma de gráfico caracteriza desigualdade de variâncias entre grupos, ou heteroscedasticidade.   
 
 A premissa de independência foi observada na fase de planejamento, onde a avaliação do algoritmo foi executada através de amostragem sequencial da configuração 1 até a configuração 4 (amostra 1 da config 1, amostra 1 da config 2, amostra 1 da config 3, amostra 1 da config 4; amostra 2 da config 1, amostra 2 da config 2, amostra 2 da config 3, amostra 2 da config 4; e assim por diante), ao invés de amostrar todos os valores da configuração 1 até a configuração 4 (434 amostras da config 1, 434 amostras da config 2, 434 amostras da config 3 e 434 amostras da config 4). Esta premissa também pode ser verificada através do teste de Durbin-Watson para correlações seriais em conjunto com o gráfico de ordenação dos resíduos.
 
@@ -255,56 +263,27 @@ dwt <- durbinWatsonTest(model)
 plot(x = seq_along(model$residuals), y = model$residuals, type = "l", xlab = "Ordem dos Resíduos", ylab = "Valor dos Resíduos", main = "Gráfico de Ordenação dos Resíduos")
 points(x = seq_along(model$residuals), y = model$residuals, type = "p", col = as.numeric(algoritmo[,1]))
 ```
+```{r, echo=FALSE,fig.align='center',out.width = '80%'}
+cat("p-valor: ",dwt$p)
+```
 
-O teste de Durbin-Watson retornou um p-valor = `r dwt$p`. Este p-valor indica independência dos resíduos. O gráfico de ordenação dos resíduos não possui tendência de alta ou de baixa, indicando a independência dos resíduos.   
+O teste de Durbin-Watson retornou um p-valor = $`r dwt$p`$. Este p-valor indica independência dos resíduos. O gráfico de ordenação dos resíduos não possui tendência de alta ou de baixa, indicando a independência dos resíduos.   
 
 Os resultados desta seção demonstram que as premissas de normalidade e de homoscedasticidade dos resíduos não foram atendidas. Por isto, vamos realizar a adequação destas premissas na próxima seção.   
 
 
 ### 6. Adequação das Premissas dos Testes
 
-Realizei os testes com o logaritmo na base 10 das amostras.   
+Como as premissas de homoscedasticidade e de normalidade não foram atendidas e a análise de variância (ANOVA) depdende dessas premissas, mostrou-se necessário o uso de técnicas não paramétricas, pois essas assumem poucas (ou nenhuma) hipóteses sobre a distribuição de probabilidade da população [3].
+Como alternativa ao ANOVA, o teste não-paramétrico de Kruskal-Wallis pode ser utilizado, o qual realiza a comparação entre médias de 3 ou mais amostras independentes [4]. O teste de kruskal-wallis é análogo ao ANOVA 1 fator, porém sem nenhuma restrição sobre as premissas de normalidade e homoscedasticidade.
 
-```{r, echo=TRUE,fig.align='center',out.width = '80%'}
-algoritmo$log <- log10(algoritmo$out)
+No R studio, o teste de kruskal-wallis pode ser executado através da função kruskal.test:
 
-model1 <- aov(log~label_out, data = algoritmo)
-summary.aov(model1)
-
-shapiro.test(model1$residuals)
-qqPlot(model1$residuals, pch = 16, lwd = 3, cex = 1, las = 1, xlab = "Quantis Normalizados", ylab = "Resíduos", main = "Gráfico de Normalidade dos Resíduos")
-
-fligner.test(log~label_out, data = algoritmo)
-plot(x = model1$fitted.values, y = model1$residuals, xlab = "Valores Ajustados", ylab = "Resíduos", main = "Gráfico de Homoscedasticidade dos Resíduos")
-
-durbinWatsonTest(model1)
-plot(x = seq_along(model1$residuals), y = model1$residuals, type = "l", xlab = "Ordem dos Resíduos", ylab = "Valor dos Resíduos", main = "Gráfico de Ordenação dos Resíduos")
-points(x = seq_along(model1$residuals), y = model1$residuals, type = "p", col = as.numeric(algoritmo[,1]))
+```{r, echo=TRUE}
+kruskal.test(out~label_out, data = algoritmo)
 ```
 
-Infelizmente não passou nos testes.   
-
-Realizei os testes com a raiz quadrada das amostras.   
-
-```{r, echo=TRUE,fig.align='center',out.width = '80%'}
-algoritmo$raiz <- sqrt(algoritmo$out)
-
-model2 <- aov(raiz~label_out, data = algoritmo)
-summary.aov(model2)
-
-shapiro.test(model2$residuals)
-qqPlot(model2$residuals, pch = 16, lwd = 3, cex = 1, las = 1, xlab = "Quantis Normalizados", ylab = "Resíduos", main = "Gráfico de Normalidade dos Resíduos")
-
-fligner.test(raiz~label_out, data = algoritmo)
-plot(x = model2$fitted.values, y = model2$residuals, xlab = "Valores Ajustados", ylab = "Resíduos", main = "Gráfico de Homoscedasticidade dos Resíduos")
-
-durbinWatsonTest(model2)
-plot(x = seq_along(model2$residuals), y = model2$residuals, type = "l", xlab = "Ordem dos Resíduos", ylab = "Valor dos Resíduos", main = "Gráfico de Ordenação dos Resíduos")
-points(x = seq_along(model2$residuals), y = model2$residuals, type = "p", col = as.numeric(algoritmo[,1]))
-```
-
-Infelizmente continua não passando nos testes.   
-
+O resultado do teste das hipóteses retornou um p-valor < 2.2 x $10^{-16}$. Como o p-valor é menor do que o valor de $\alpha$ = `r alpha`, temos evidência suficiente para rejeitar $H_0$ com o nível de significância de `r alpha`. Desta forma, concluímos que existe alguma diferença no desempenho médio do algoritmo para as diferentes configurações.
 
 ### 7. Estimação dos Tamanhos de Efeito e dos Intervalos de Confiança   
 
@@ -321,3 +300,5 @@ Infelizmente continua não passando nos testes.
 ### Referências   
 [1] Storn R, Price K (1997). "Differential Evolution: A Simple and Efficient Heuristic for Global Optimization over Continuous Spaces." *J. of Global Optimization*, **11**(4), 341-359.   
 [2] Campelo F, Botelho M (2016). "Experimental Investigation of Recombination Operators for Differential Evolution." In *Proc. Genetic and Evolutionary Computation Conference - GECCO'2016*.   
+[3] Portal Action. "Técnicas Não Paramétricas". Disponível em: <http://www.portalaction.com.br/tecnicas-nao-parametricas>. Acesso em 31/10/2017
+[4] Portal Action. "Teste de Kruskal Wallis". Disponível em: <http://www.portalaction.com.br/976-4-teste-de-kruskal-wallis>. Acesso em 31/10/2017
