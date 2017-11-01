@@ -280,18 +280,59 @@ Como alternativa ao ANOVA, o teste não-paramétrico de Kruskal-Wallis pode ser 
 No R studio, o teste de kruskal-wallis pode ser executado através da função kruskal.test:
 
 ```{r, echo=TRUE}
-kruskal.test(out~label_out, data = algoritmo)
+kw_model <- kruskal.test(out~label_out, data = algoritmo)
+print(kw_model)
 ```
 
-O resultado do teste das hipóteses retornou um p-valor < 2.2 x $10^{-16}$. Como o p-valor é menor do que o valor de $\alpha$ = `r alpha`, temos evidência suficiente para rejeitar $H_0$ com o nível de significância de `r alpha`. Desta forma, concluímos que existe alguma diferença no desempenho médio do algoritmo para as diferentes configurações.
+O resultado do teste das hipóteses retornou um p-valor = $`r kw_model$p.value`$. Como o p-valor é menor do que o valor de $\alpha$ = `r alpha`, temos evidência suficiente para rejeitar $H_0$ com o nível de significância de `r alpha`. Desta forma, concluímos que existe alguma diferença no desempenho médio do algoritmo para as diferentes configurações.
 
 ### 7. Estimação dos Tamanhos de Efeito e dos Intervalos de Confiança   
 
+Como o teste utilizado foi o não-paramétrico de Kruskal-Wallis, o mesmo não utiliza estimativas de parâmetros amostrais e, por isso, não possui intervalo de confiança.
+
+Para efeito de aprendizado, podemos apresentar o intervalo de confiança das diferenças entre as médias dos tratamentos para o ANOVA:
+
+```{r, echo=FALSE, results='hide'}
+if(!require(multcomp)){
+    install.packages("multcomp")
+    library(multcomp)
+}
+getwd()
+```
+
+```{r, echo=TRUE,fig.align='center',out.width = '80%'}
+out_tukey <- glht(model=model,linfct = mcp(label_out="Tukey")) 
+out_tukey_CI <- confint(out_tukey, level = 1-alpha)
+print(out_tukey_CI)
+plot(out_tukey_CI,xlab = "Desempenho médio"  ,main = "Intervalos de 95% de confiança")
+```
 
 
 ### 8. Derivação de Conclusões    
 
+Através da análise das premissas do teste, foi observado que as amostras obtidas são independentes mas violam as premissas de homoscedasticidade e normalidade. Portanto foi necessário utilizar um teste não paramétrico.
+Por se tratar de amostras independentes, o teste não-paramétrico de Kruskal-Wallis foi utilizado. 
+Através do teste, vimos que há evidências suficientes para se rejeitar a hipótese nula de que não há diferença de desempenho entre as configurações do algorítmo, com um nível de significância de $\alpha$ = `r alpha`.
+Através da análise gráfica, 'possível determinar que a configuração do algoritmo com melhor desempenho é a configuração 2. Além disso, através da análise dos intervalos de confiança da diferença entre as médias de todos vs todos, podemos observar que a média da diferença das comparações envolvendo a configuração 2 são sempre muito maiores, e como ela apresenta o menor valor médio, é possível concluir que é a configuração com melhor desempenho.
 
+Como a configuração 2 foi identificada como a melhor, podemos realizar uma comparação de todos versus um, através do teste de Dunnet, para identificar, em média, a magnitude da diferença.
+
+```{r, echo=TRUE,fig.align='center',out.width = '80%'}
+algoritmo$label_out <- relevel(algoritmo$label_out, ref = "out2")
+model2 <- aov(out~label_out, data = algoritmo)
+out_dunnet <- glht(model=model2,linfct = mcp(label_out="Dunnet")) 
+out_dunnet_CI <- confint(out_dunnet, level = 1-alpha)
+print(out_dunnet_CI)
+plot(out_dunnet_CI,xlab = "Desempenho médio"  ,main = "Intervalos de 95% de confiança")
+```
+
+Podemos então observar, que:
+
+1) A diferença entre a configuração 2 e a configuração 1 possui magnitude igual a 43.4702, com 95% de confiança no intervalo de 42.8442 a 44.0962
+
+2) A diferença entre a configuração 2 e a configuração 3 possui magnitude igual a 41.9042, com 95% de confiança no intervalo de 41.2782 a 42.5302
+
+3) A diferença entre a configuração 2 e a configuração 4 possui magnitude igual a 43.2757, com 95% de confiança no intervalo de 42.6497 a 43.9017
 
 ### 9. Discussão sobre Possíveis Limitações do Estudo e Sugestões de Melhoria   
 
